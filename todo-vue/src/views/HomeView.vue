@@ -1,6 +1,41 @@
 <script setup>
-import { StarIcon } from '@heroicons/vue/24/solid'
+import { computed, onMounted, reactive, ref } from 'vue';
+import FormInput from '@/components/FormInput.vue';
+import TodoList from '@/components/TodoList.vue';
+import { useTodoStore } from '@/stores/todoStore';
+import { storeToRefs } from 'pinia';
 
+const { store, index } = useTodoStore();
+const { todos } = storeToRefs(useTodoStore());
+const formData = reactive({
+  title: ''
+})
+
+const activeFilter = ref('all');
+const updateData = reactive({
+  id: null,
+  icon: false,
+});
+
+const filteredTodos = computed(() => {
+  if(activeFilter.value === 'favorite') {
+    return todos.value.filter(todo => todo.favorite)
+  }else if(activeFilter.value === 'completed') {
+    return todos.value.filter(todo => todo.completed)
+  }else if(activeFilter.value === 'all') {
+    return todos.value.filter(todo => todo.completed === 0 && todo.favorite === 0)
+  }
+});
+
+const getIdHandler = ([id, title]) => {
+  formData.title = title;
+  updateData.id = id;
+  updateData.icon = true;
+}
+
+const clearFieldHandler = () => formData.title = '';
+
+onMounted(() =>{ index() });
 </script>
 
 <template>
@@ -9,20 +44,16 @@ import { StarIcon } from '@heroicons/vue/24/solid'
       <div class="flex justify-between items-center">
           <h1 class="text-2xl my-4 font-semibold">Todo</h1>
           <ul class="flex gap-2 text-sm text-gray-600">
-            <li><a href="">All</a></li>
-            <li><a href="">Favorite</a></li>
-            <li><a href="">Completed</a></li>
+            <li><a href="#" :class="{'font-bold text-black': activeFilter === 'all'}" @click.prevent="activeFilter = 'all'">All</a></li>
+            <li><a href="#" :class="{'font-bold text-black': activeFilter === 'favorite'}" @click.prevent="activeFilter = 'favorite'">Favorite</a></li>
+            <li><a href="#" :class="{'font-bold text-black': activeFilter === 'completed'}" @click.prevent="activeFilter = 'completed'">Completed</a></li>
           </ul>
       </div>
-      <form @submit.prevent="addTodo">
-          <input type="text" placeholder="Enter new todo" class="p-3 rounded-3xl w-full border border-gray-300">
+      <form @submit.prevent="store(formData)">
+        <FormInput v-model="formData.title" :updateData="updateData" :clearFieldHandler="clearFieldHandler" :newTitle="formData.title" />
       </form>
-      <ul class="mt-4 text-left">
-          <li class="p-3 mx-auto mb-2 border-b relative">
-              test 1
-              <StarIcon class="size-5 absolute right-7 top-[14px] text-yellow-500 hover:text-yellow-700" />
-              <input type="checkbox" class="absolute right-2 top-[17px]">
-          </li>
+      <ul v-for="todo in filteredTodos" :key="todo.id" class="mt-4 text-left">
+        <TodoList :todo="todo" @get-ID="getIdHandler" :activeFilter="activeFilter"/>
       </ul>
   </div>
     </div>
